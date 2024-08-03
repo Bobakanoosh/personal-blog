@@ -1,0 +1,260 @@
+---
+title: "AdonisJS Mixin for Fetching Models of Authenticated User"
+description: "Creating a custom AdonisJS mixin to add an authedQuery method, simplifying queries based on the currently authenticated user"
+publishDate: "August 2 2024"
+tags: ["adonisjs", "backend", "typescript"]
+draft: true
+---
+
+For anyone unfamiliar, AdonisJS v6 is a TypeScript-first Node.js web framework, similar to the likes of Laravel and Ruby on Rails. If you're comfortable with a MVC pattern, you'll be right at home with AdonisJS.
+
+## Fetching Models of Authenticated User
+
+While working on a personal financial tracking app, I realized that querying a Model based on the currently authenticated user would be a common workflow since I won't be sharing data across users.
+
+I landed on the below, very clean solution:
+```ts
+export default class TransactionsController {
+  async index({ response }: HttpContext) {
+    const transaction = await Transaction.authedQuery()
+    // ...
+  }
+}
+```
+
+That's it!
+
+## How I got there
+
+Let's take a step back and look where I started, and how my code evolved to this solution.
+
+### The Basic Way
+```ts
+export default class TransactionsController {
+    async index({ response, auth }: HttpContext) {
+        const user = auth.getUserOrFail()
+        const transactions = await Transaction.query().where('userId', user.id)
+        // ..
+    }
+}
+```
+
+There's nothing wrong with this approach, but it's not very reusable. Now anytime I query a model across the entire app, I'll have to repeat most of that code.
+
+### Using withScopes
+
+Now that I know what code I want to reduce, my first goal is to get it working for *just this model*. 
+We can worry about a more generic solution for all Models later.
+
+After looking at the Lucid docs, I found [withScopes](https://lucid.adonisjs.com/docs/model-query-builder#withscopes). 
+This essentially lets us create a static property on the model, that has access to the `query` object, and, we can pass custom parameters: the authenticated User! Exactly what we need.
+
+Here's what it looks like:
+```ts
+export default class Transaction extends BaseModel {
+  // Admittedly this name could be better
+  static belongsToUser = scope((query, user: User) => {
+    query.where('userId', user.id)
+  })
+}
+```
+Now we can do:
+```ts
+export default class TransactionsController {
+  async index({ response, auth }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const transactions = await Transaction.query()
+        .withScopes((scopes) => {
+            scopes.belongsToUser(user)
+        })
+    // ..
+  }
+}
+```
+This reduces the total lines of code we'll have, but still is pretty verbose.
+
+Let's first take a stab at making this reusable across all Models.
+
+### Using TypeScript Mixins
+
+One option is to create an `AppModel` class that extends `BaseModel`, and has the static `belongsToUser` variable on it:
+```ts
+export default class AppModel extends BaseModel {
+  static belongsToUser = scope((query, user: User) => {
+    query.where('userId', user.id)
+  })
+}
+
+// app/models/Transaction.ts
+export default class Transaction extends AppModel {
+  // ...
+}
+```
+This works fine and isn't a half-bad solution. However, I'd prefer to follow AdonisJS's usage of TypeScript Mixins.
+
+
+### What is a Mixin?
+
+[Mixins](https://www.typescriptlang.org/docs/handbook/mixins.html) are a TypeScript feature for extending the functionality of a class.
+
+AdonisJS uses them in a few ways, one example being in their Official [@adonisjs/auth](https://github.com/adonisjs/auth) package:
+
+`withAuthFinder` adds a few helper methods to add user lookup and password verification methods on a model.
+```ts
+// app/models/user.ts
+import { compose } from '@adonisjs/core/helpers'
+import { BaseModel } from '@adonisjs/lucid/orm'
+import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
+
+const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
+  uids: ['email'],
+  passwordColumnName: 'password',
+})
+
+export default class User extends compose(BaseModel, AuthFinder) {
+   // ...
+}
+```
+
+Using the [compose](https://docs.adonisjs.com/guides/references/helpers#compose) helper, we can have `User` extend both `BaseModel` and `AuthFinder`.
+
+
+### Let's make our own Mixin
+```ts
+// app/mixins/with_belongs_to_user_mixin.ts
+export function withBelongsToUser() {
+  return <Model extends NormalizeConstructor<typeof BaseModel>>(superclass: Model) => {
+    class ModelWithBelongsToUser extends superclass {
+      static belongsToUser = scope((query, user: User) => {
+        query.where('userId', user.id)
+      })
+    }
+
+    return ModelWithBelongsToUser
+  }
+}
+```
+
+Which we can then use like so:
+```ts
+// app/models/transaction.ts
+import { withBelongsToUser } from 'app/mixins/with_belongs_to_user_mixin'
+
+export default class Transaction extends compose(BaseModel, withBelongsToUser()) {
+  // ...
+}
+```
+
+Now any model can easily use the `belongsToUser` scope!
+
+### Making it shorter
+Remember the end goal is to be able to do `Transaction.authedQuery()`.
+
+So, let's start by making a static method within the mixin:
+```ts
+static authedQuery() {
+  // ...
+}
+```
+
+Now, we need to figure out how to get:
+1. The `query` object
+2. The current authenticated `User`
+
+The query is easy, after all, we're in a class extending `BaseModel`, so we can just use `this.query()`:
+```ts
+static authedQuery() {
+  const query = this.query()
+}
+```
+
+Then, we can use the scope we previously added to the mixin:
+```ts
+static authedQuery() {
+  const query = this.query()
+  return query.withScopes(() => this.belongsToUser(query, /* user goes here */))
+}
+```
+
+I guess we'll have to suffer with passing the `User` object as a parameter for now:
+```ts
+static authedQuery(user: User) {
+  const query = this.query()
+  return query.withScopes(() => this.belongsToUser(query, user))
+}
+```
+
+So now, we can do:
+```ts
+// app/models/transaction.ts
+import { withBelongsToUser } from 'app/mixins/with_belongs_to_user_mixin'
+
+export default class Transaction extends compose(BaseModel, withBelongsToUser()) {
+  async index({ auth }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const transactions = await Transaction.authedQuery(user)
+    // ...
+  }
+}
+```
+
+Huzzah! *almost* there. One could argue this is good enough, but that one line will haunt my dreams if I don't get rid of it.
+
+
+### Accessing HttpContext anywhere
+I remembered reading in the docs about a way to get the current `HttpContext` from anywhere in the app, via [Async local storage](https://docs.adonisjs.com/guides/concepts/async-local-storage#async-local-storage).
+There's pros and cons to enabling this, so if you'd rather not, feel free to skip this section.
+
+From the docs:
+> [Async Local Storage] allows storing data throughout the lifetime of a web request or any other asynchronous duration. It is similar to thread-local storage in other languages
+
+Enabling it is easy:
+```ts
+// config/app.ts
+export const http = defineConfig({
+  useAsyncLocalStorage: true,
+})
+```
+
+and now, ["anywhere"](https://docs.adonisjs.com/guides/concepts/async-local-storage#caveats) in the app, we can do:
+```ts
+const ctx = HttpContext.getOrFail()
+```
+
+### Combining it all
+
+Taking everything we've learned so far and putting it together, we can create a mixin that adds an `authedQuery` method to any model:
+```ts
+// app/mixins/with_authed_query_mixin.ts
+export function withAuthedQuery() {
+  return <Model extends NormalizeConstructor<typeof BaseModel>>(superclass: Model) => {
+    class ModelWithAuthedQuery extends superclass {
+      static belongsToUser = scope((query, user: User) => {
+        query.where('userId', user.id)
+      })
+
+      static authedQuery() {
+        const { auth } = HttpContext.getOrFail()
+        const user = auth.getUserOrFail()
+        const query = this.query()
+        return query.withScopes(() => this.belongsToUser(query, user))
+      }
+    }
+
+    return ModelWithAuthedQuery
+  }
+}
+```
+
+and use it like so 🎉:
+```ts
+// app/models/transaction.ts
+import { withAuthedQuery } from 'app/mixins/with_authed_query_mixin'
+
+export default class Transaction extends compose(BaseModel, withAuthedQuery()) {
+  async index({ response }: HttpContext) {
+    const transactions = await Transaction.authedQuery()
+    // ...
+  }
+}
+```
