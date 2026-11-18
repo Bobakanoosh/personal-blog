@@ -14,24 +14,18 @@
 		"check": "astro check"
 	},
 	"dependencies": {
-		"@astrojs/sitemap": "3.1.6",
-		"@astrojs/tailwind": "5.1.0",
-		"astro": "4.12.1",
-		"astro-icon": "^1.1.0",
-		"cssnano": "^7.0.4",
-		"sharp": "^0.33.4"
+		"@astrojs/sitemap": "3.7.5",
+		"astro": "7.4.12",
+		"astro-icon": "^1.2.0",
+		"sharp": "^0.35.5"
 	},
 	"devDependencies": {
-		"@astrojs/check": "^0.8.3",
-		"@iconify-json/mdi": "^1.1.67",
-		"@tailwindcss/aspect-ratio": "^0.4.2",
-		"@types/eslint": "^8.56.11",
-		"@typescript-eslint/eslint-plugin": "^7.18.0",
-		"@typescript-eslint/parser": "^7.18.0",
-		"autoprefixer": "^10.4.20",
-		"prettier": "^3.3.3",
-		"prettier-plugin-astro": "0.14.1",
-		"tailwindcss": "^3.4.7",
-		"typescript": "^5.5.4"
+		"@astrojs/check": "^0.9.12",
+		"@iconify-json/mdi": "^1.2.3",
+		"@tailwindcss/vite": "^4.3.5",
+		"prettier": "^3.10.1",
+		"prettier-plugin-astro": "1.1.2",
+		"tailwindcss": "^4.3.5",
+		"typescript": "^6.0.3"
 	}
 }
