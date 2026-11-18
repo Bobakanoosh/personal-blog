@@ -12,7 +12,7 @@ const { description, ogImage, title } = Astro.props;
 // The home page is titled with just the site name.
 const siteTitle = title === "Home" ? siteConfig.title : `${title} | ${siteConfig.title}`;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
-const socialImageURL = new URL(ogImage ? ogImage : "/social-card.png", Astro.url).href;
+const socialImageURL = new URL(ogImage ? ogImage : "/og.png", Astro.url).href;
 ---
 
 <meta charset="utf-8" />
@@ -34,7 +34,7 @@ const socialImageURL = new URL(ogImage ? ogImage : "/social-card.png", Astro.url
 
 {/* Open Graph / Facebook */}
 <meta content="website" property="og:type" />
-<meta content={title} property="og:title" />
+<meta content={siteTitle} property="og:title" />
 <meta content={description} property="og:description" />
 <meta content={canonicalURL} property="og:url" />
 <meta content={siteConfig.title} property="og:site_name" />
@@ -46,7 +46,7 @@ const socialImageURL = new URL(ogImage ? ogImage : "/social-card.png", Astro.url
 {/* Twitter */}
 <meta content="summary_large_image" property="twitter:card" />
 <meta content={canonicalURL} property="twitter:url" />
-<meta content={title} property="twitter:title" />
+<meta content={siteTitle} property="twitter:title" />
 <meta content={description} property="twitter:description" />
 <meta content={socialImageURL} property="twitter:image" />
 

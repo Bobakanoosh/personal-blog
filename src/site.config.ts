@@ -3,7 +3,8 @@ import type { SiteConfig } from "@/types";
 export const siteConfig: SiteConfig = {
 	// Used as a meta property in src/components/BaseHead.astro
 	author: "Jack Englund",
-	description: "Portfolio of Jack Englund, a software engineer building products for gaming and fintech.",
+	description:
+		"Product engineer embracing agentic development. Portfolio of products I've built in gaming and fintech, including Allocate, stats.cc, Overlayed, and u.gg.",
 	lang: "en-US",
 	ogLocale: "en_US",
 	title: "Jack Englund",
