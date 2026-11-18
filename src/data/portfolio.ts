@@ -1,6 +1,7 @@
 import type { ImageMetadata } from "astro";
 
 import allocateAdvisorFeed from "@/assets/portfolio/allocate-advisor-feed.webp";
+import allocateDashboard from "@/assets/portfolio/allocate-dashboard.webp";
 import allocateInsights from "@/assets/portfolio/allocate-insights.webp";
 import allocateOpportunity from "@/assets/portfolio/allocate-opportunity.webp";
 import allocatePortfolioHealth from "@/assets/portfolio/allocate-portfolio-health.webp";
@@ -47,6 +48,7 @@ export const portfolio: PortfolioItem[] = [
 		description:
 			"Connects wealth advisors with asset managers in private markets. Advisors find vetted investment opportunities, handle subscriptions in one place, and track how their clients' portfolios perform after investing.",
 		images: [
+			{ alt: "Allocate client portfolio dashboard with NAV breakdown, latest cash flow, and investments table", src: allocateDashboard },
 			{ alt: "Allocate fund page for Atlas Growth IV with key terms and target returns", src: allocateOpportunity },
 			{ alt: "Allocate advisor feed with an agentic insight matching a fund to clients", src: allocateAdvisorFeed },
 			{ alt: "Allocate subscription progress showing workflow steps and status by client", src: allocateSubscriptions },
@@ -63,7 +65,6 @@ export const portfolio: PortfolioItem[] = [
 		years: "2023 – Present",
 	},
 	{
-		demo: "https://statscc.jackenglund.com",
 		description:
 			"Rainbow Six Siege stats, on the web and in an Electron desktop overlay. The site has global leaderboards, player profiles with ranked session history, detailed match breakdowns, and ban tracking. The desktop app tracks your season stats and shows a live scoreboard and per-round damage report in-game while you play.",
 		images: [
