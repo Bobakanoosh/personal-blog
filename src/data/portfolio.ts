@@ -65,6 +65,7 @@ export const portfolio: PortfolioItem[] = [
 		years: "2023 – Present",
 	},
 	{
+		demo: "https://statscc.jackenglund.com",
 		description:
 			"Rainbow Six Siege stats, on the web and in an Electron desktop overlay. The site has global leaderboards, player profiles with ranked session history, detailed match breakdowns, and ban tracking. The desktop app tracks your season stats and shows a live scoreboard and per-round damage report in-game while you play.",
 		images: [
