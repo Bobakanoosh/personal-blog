@@ -1,0 +1,149 @@
+---
+/**
+ * Full screen media viewer. Opens for any element with `data-lightbox` and
+ * navigates every such element on the page, in document order.
+ *
+ * Trigger attributes:
+ * - href: full size image, or video source
+ * - data-lightbox="image" | "video"
+ * - data-alt: image alt text
+ * - data-caption: caption shown in the top bar
+ * - data-poster: video poster (videos only)
+ */
+---
+
+<dialog
+	aria-label="Media viewer"
+	class="m-0 h-dvh max-h-none w-screen max-w-none bg-transparent p-0 text-white backdrop:bg-black/90"
+	id="lightbox"
+>
+	<div class="flex h-full flex-col">
+		<div class="flex items-center gap-4 px-4 py-3 text-sm sm:px-6">
+			<p class="min-w-0 flex-1 truncate font-semibold" id="lightbox-caption"></p>
+			<p class="tabular-nums text-white/70" id="lightbox-counter"></p>
+			<button
+				aria-label="Close"
+				class="rounded-md p-2 text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+				data-lightbox-close
+				type="button"
+			>
+				<svg aria-hidden="true" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+					<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+				</svg>
+			</button>
+		</div>
+		<div class="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-4 sm:px-20 sm:pb-8" id="lightbox-stage"></div>
+		<button
+			aria-label="Previous"
+			class="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white/80 hover:bg-white/15 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white sm:left-4"
+			data-lightbox-prev
+			type="button"
+		>
+			<svg aria-hidden="true" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"></path>
+			</svg>
+		</button>
+		<button
+			aria-label="Next"
+			class="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white/80 hover:bg-white/15 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white sm:right-4"
+			data-lightbox-next
+			type="button"
+		>
+			<svg aria-hidden="true" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"></path>
+			</svg>
+		</button>
+	</div>
+</dialog>
+
+<script>
+	const dialog = document.getElementById("lightbox") as HTMLDialogElement;
+	const stage = document.getElementById("lightbox-stage")!;
+	const caption = document.getElementById("lightbox-caption")!;
+	const counter = document.getElementById("lightbox-counter")!;
+	const items = [...document.querySelectorAll<HTMLAnchorElement>("[data-lightbox]")];
+	let index = 0;
+
+	function render(i: number) {
+		index = (i + items.length) % items.length;
+		const item = items[index]!;
+		const isVideo = item.dataset.lightbox === "video";
+
+		let media: HTMLImageElement | HTMLVideoElement;
+		if (isVideo) {
+			const video = document.createElement("video");
+			video.src = item.href;
+			video.controls = true;
+			video.autoplay = true;
+			video.playsInline = true;
+			if (item.dataset.poster) video.poster = item.dataset.poster;
+			media = video;
+		} else {
+			const img = document.createElement("img");
+			img.src = item.href;
+			img.alt = item.dataset.alt ?? "";
+			img.decoding = "async";
+			media = img;
+		}
+		media.className = "max-h-full max-w-full rounded-md object-contain shadow-2xl";
+		stage.querySelector("video")?.pause();
+		stage.replaceChildren(media);
+
+		caption.textContent = item.dataset.caption ?? "";
+		counter.textContent = `${index + 1} / ${items.length}`;
+
+		// Warm the cache for neighbouring images so navigation feels instant.
+		for (const n of [index - 1, index + 1]) {
+			const neighbour = items[(n + items.length) % items.length];
+			if (neighbour?.dataset.lightbox === "image") new Image().src = neighbour.href;
+		}
+	}
+
+	function open(i: number) {
+		render(i);
+		document.documentElement.style.overflow = "hidden";
+		dialog.showModal();
+	}
+
+	items.forEach((item, i) =>
+		item.addEventListener("click", (e) => {
+			// Let modified clicks (new tab, etc.) behave like a normal link.
+			if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+			e.preventDefault();
+			open(i);
+		}),
+	);
+
+	dialog.querySelector("[data-lightbox-prev]")!.addEventListener("click", () => render(index - 1));
+	dialog.querySelector("[data-lightbox-next]")!.addEventListener("click", () => render(index + 1));
+	dialog.querySelector("[data-lightbox-close]")!.addEventListener("click", () => dialog.close());
+
+	// Clicking the empty area around the media closes the viewer.
+	stage.addEventListener("click", (e) => {
+		if (e.target === stage) dialog.close();
+	});
+
+	dialog.addEventListener("keydown", (e) => {
+		// Arrow keys seek when the video itself has focus.
+		if (e.target instanceof HTMLVideoElement) return;
+		if (e.key === "ArrowLeft") render(index - 1);
+		else if (e.key === "ArrowRight") render(index + 1);
+	});
+
+	dialog.addEventListener("close", () => {
+		stage.querySelector("video")?.pause();
+		stage.replaceChildren();
+		document.documentElement.style.overflow = "";
+	});
+
+	// Swipe left / right on touch devices.
+	let touchX: number | null = null;
+	stage.addEventListener("touchstart", (e) => (touchX = e.touches[0]?.clientX ?? null), { passive: true });
+	stage.addEventListener("touchend", (e) => {
+		const endX = e.changedTouches[0]?.clientX;
+		if (touchX === null || endX === undefined) return;
+		const dx = endX - touchX;
+		touchX = null;
+		if (Math.abs(dx) > 50) render(dx > 0 ? index - 1 : index + 1);
+	});
+</script>

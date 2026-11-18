@@ -1,7 +1,7 @@
 ---
 import { menuLinks } from "@/site-config";
 
-import Search from "../Search.astro";
+import SocialList from "../SocialList.astro";
 import ThemeToggle from "../ThemeToggle.astro";
 
 const url = new URL(Astro.request.url);
@@ -24,7 +24,7 @@ const url = new URL(Astro.request.url);
 			{
 				menuLinks.map((link) => (
 					<a
-						aria-current={url.pathname === link.path ? "page" : false}
+						
 						class="px-4 py-4 underline-offset-2 sm:py-0 sm:hover:underline"
 						data-astro-prefetch
 						href={link.path}
@@ -35,7 +35,7 @@ const url = new URL(Astro.request.url);
 			}
 		</nav>
 	</div>
-	<Search />
+	<SocialList />
 	<ThemeToggle />
 	<mobile-button>
 		<button

@@ -1,0 +1,152 @@
+---
+import type { PortfolioItem } from "@/data/portfolio";
+
+import { Image, getImage } from "astro:assets";
+
+interface Props {
+	item: PortfolioItem;
+}
+
+const { item } = Astro.props;
+const [mainImage, ...thumbnails] = item.images ?? [];
+
+// Full resolution versions, opened when an image is clicked.
+const fullSize = await Promise.all(
+	(item.images ?? []).map((img) => getImage({ format: "webp", quality: 90, src: img.src })),
+);
+
+const videoPoster = item.video
+	? await getImage({ format: "webp", src: item.video.poster, width: 1280 })
+	: undefined;
+
+// With screenshots, the video sits at the end of the thumbnail grid. Without, it's shown large.
+const videoAsThumbnail = !!item.video && !!mainImage;
+
+const links = [
+	item.url && { href: item.url, label: "Visit site" },
+	item.demo && { href: item.demo, label: "Live demo" },
+].filter((l): l is { href: string; label: string } => !!l);
+
+const frame = "block overflow-hidden rounded-md border border-textColor/15 transition hover:border-accent";
+---
+
+<article class="flex flex-col gap-3">
+	<header class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+		<h3 class="text-lg font-semibold text-accent-2">{item.name}</h3>
+		{item.years && <p class="text-xs tabular-nums text-textColor/70">{item.years}</p>}
+	</header>
+	<p>{item.description}</p>
+	{
+		links.length > 0 && (
+			<ul class="flex flex-wrap gap-x-4 gap-y-1">
+				{links.map(({ href, label }) => (
+					<li>
+						<a class="cactus-link" href={href} rel="noopener noreferrer" target="_blank">
+							{label} ↗
+						</a>
+					</li>
+				))}
+			</ul>
+		)
+	}
+	{
+		mainImage && (
+			<a
+				class:list={[frame, "mt-1"]}
+				data-alt={mainImage.alt}
+				data-caption={item.name}
+				data-lightbox="image"
+				href={fullSize[0]?.src}
+				title="View full size"
+			>
+				<Image
+					alt={mainImage.alt}
+					class="w-full"
+					sizes="(min-width: 896px) 832px, 100vw"
+					src={mainImage.src}
+					widths={[640, 832, 1280, 1664]}
+				/>
+			</a>
+		)
+	}
+	{
+		(thumbnails.length > 0 || videoAsThumbnail) && (
+			<ul class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+				{thumbnails.map((img, i) => (
+					<li>
+						<a
+							class={frame}
+							data-alt={img.alt}
+							data-caption={item.name}
+							data-lightbox="image"
+							href={fullSize[i + 1]?.src}
+							title="View full size"
+						>
+							<Image
+								alt={img.alt}
+								class="aspect-video w-full object-cover object-top"
+								sizes="(min-width: 640px) 270px, 50vw"
+								src={img.src}
+								widths={[320, 540, 800]}
+							/>
+						</a>
+					</li>
+				))}
+				{videoAsThumbnail && item.video && (
+					<li>
+						<a
+							class:list={[frame, "group relative"]}
+							data-caption={item.name}
+							data-lightbox="video"
+							data-poster={videoPoster?.src}
+							href={item.video.src}
+							title={`Play ${item.video.title}`}
+						>
+							<Image
+								alt={item.video.title}
+								class="aspect-video w-full object-cover"
+								sizes="(min-width: 640px) 270px, 50vw"
+								src={item.video.poster}
+								widths={[320, 540, 800]}
+							/>
+							<span class="absolute inset-0 flex items-center justify-center bg-black/10 transition group-hover:bg-black/25">
+								<span class="flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-white shadow-lg transition group-hover:scale-110">
+									<svg aria-hidden="true" class="ms-0.5 h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+										<path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z" />
+									</svg>
+								</span>
+							</span>
+						</a>
+					</li>
+				)}
+			</ul>
+		)
+	}
+	{
+		item.video && !videoAsThumbnail && (
+			<a
+				class:list={[frame, "group relative mt-1"]}
+				data-caption={item.name}
+				data-lightbox="video"
+				data-poster={videoPoster?.src}
+				href={item.video.src}
+				title={`Play ${item.video.title}`}
+			>
+				<Image
+					alt={item.video.title}
+					class="aspect-video w-full object-cover"
+					sizes="(min-width: 896px) 832px, 100vw"
+					src={item.video.poster}
+					widths={[640, 832, 1280]}
+				/>
+				<span class="absolute inset-0 flex items-center justify-center bg-black/10 transition group-hover:bg-black/25">
+					<span class="flex h-16 w-16 items-center justify-center rounded-full bg-black/70 text-white shadow-lg transition group-hover:scale-110">
+						<svg aria-hidden="true" class="ms-1 h-7 w-7" fill="currentColor" viewBox="0 0 24 24">
+							<path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z" />
+						</svg>
+					</span>
+				</span>
+			</a>
+		)
+	}
+</article>

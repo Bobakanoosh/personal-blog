@@ -8,38 +8,31 @@ import { Icon } from "astro-icon/components";
 */
 const socialLinks: {
 	friendlyName: string;
-	isWebmention?: boolean;
 	link: string;
 	name: string;
 }[] = [
-	{
-		friendlyName: "Github",
-		link: "https://github.com/Bobakanoosh",
-		name: "mdi:github",
-	},
-	{
-		friendlyName: "Twitter",
-		link: "https://x.com/Bobakanoosh1_",
-		name: "mdi:twitter",
-	},
 	{
 		friendlyName: "LinkedIn",
 		link: "https://www.linkedin.com/in/jack-englund/",
 		name: "mdi:linkedin",
 	},
+	{
+		friendlyName: "Github",
+		link: "https://github.com/Bobakanoosh",
+		name: "mdi:github",
+	},
 ];
 ---
 
-<div class="flex flex-wrap items-end gap-x-2">
-	<p>Socials:</p>
-	<ul class="flex flex-1 items-center gap-x-1 sm:flex-initial">
+<nav aria-label="Social links" class="ms-auto">
+	<ul class="flex items-center gap-x-1">
 		{
-			socialLinks.map(({ friendlyName, isWebmention, link, name }) => (
+			socialLinks.map(({ friendlyName, link, name }) => (
 				<li class="flex">
 					<a
-						class="inline-block p-1 sm:hover:text-link"
+						class="inline-flex rounded-md p-1.5 ring-zinc-400 transition-all hover:ring-2"
 						href={link}
-						rel={`noopener noreferrer ${isWebmention ? "me authn" : ""}`}
+						rel="noopener noreferrer"
 						target="_blank"
 					>
 						<Icon aria-hidden="true" class="h-6 w-6" focusable="false" name={name} />
@@ -49,4 +42,4 @@ const socialLinks: {
 			))
 		}
 	</ul>
-</div>
+</nav>
